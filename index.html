@@ -1,0 +1,916 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Happiest Country Simulator (Text Game)</title>
+  <style>
+    :root { --bg:#0b1220; --card:#111a2e; --muted:#9fb0d0; --text:#e9f0ff; --accent:#7aa2ff; --good:#4ade80; --bad:#fb7185; }
+    html,body{height:100%}
+    body{
+      margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(1200px 700px at 20% 0%, #18244a 0%, var(--bg) 55%);
+      color:var(--text); display:flex; align-items:center; justify-content:center; padding:18px;
+    }
+    .wrap{width:min(980px, 100%);}
+    .topbar{display:flex; gap:12px; align-items:center; justify-content:space-between; margin-bottom:14px;}
+    .title{font-size:20px; font-weight:800; letter-spacing:.2px;}
+    .pill{font-size:12px; padding:8px 10px; border-radius:999px; background:rgba(122,162,255,.14); color:var(--text); border:1px solid rgba(122,162,255,.35)}
+    .grid{display:grid; grid-template-columns: 1.3fr .7fr; gap:14px;}
+    @media (max-width: 900px){ .grid{grid-template-columns:1fr;} }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:16px;
+      box-shadow: 0 18px 55px rgba(0,0,0,.35);
+      overflow:hidden;
+    }
+    .card-header{padding:14px 16px; border-bottom:1px solid rgba(255,255,255,.09); display:flex; justify-content:space-between; gap:12px; align-items:flex-start;}
+    .card-header h2{margin:0; font-size:16px;}
+    .sub{margin:3px 0 0; color:var(--muted); font-size:13px; line-height:1.35;}
+    .card-body{padding:14px 16px;}
+    .scenario-title{font-weight:800; font-size:15px; margin:0 0 10px}
+    .scenario-text{color:var(--text); opacity:.95; line-height:1.5; margin:0 0 12px}
+    .choices{display:grid; gap:10px; margin-top:10px;}
+    button.choice{
+      text-align:left; width:100%;
+      background: rgba(17,26,46,.7);
+      border:1px solid rgba(255,255,255,.12);
+      color:var(--text);
+      border-radius:14px;
+      padding:12px 12px;
+      cursor:pointer;
+      transition: transform .05s ease, border-color .15s ease, background .15s ease;
+    }
+    button.choice:hover{border-color: rgba(122,162,255,.55); background: rgba(17,26,46,.9);}
+    button.choice:active{transform: scale(.995);}
+    .choice small{display:block; color:var(--muted); margin-top:6px; line-height:1.35}
+    .tagrow{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;}
+    .tag{font-size:11px; padding:4px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.14); color:var(--muted);}
+    .tag.command{border-color: rgba(255,158,122,.45); color:#ffd0bf;}
+    .tag.capitalist{border-color: rgba(122,255,198,.45); color:#c7ffe8;}
+    .tag.socialist{border-color: rgba(176,122,255,.45); color:#e8d9ff;}
+
+    .stats{display:grid; gap:10px;}
+    .stat{display:grid; gap:6px;}
+    .stat label{display:flex; justify-content:space-between; font-size:12px; color:var(--muted)}
+    .bar{height:10px; border-radius:999px; background: rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.10); overflow:hidden;}
+    .fill{height:100%; width:50%; background: rgba(122,162,255,.65);}
+    .delta{font-variant-numeric: tabular-nums; font-size:12px; margin-left:8px;}
+    .delta.good{color:var(--good)}
+    .delta.bad{color:var(--bad)}
+
+    .log{margin-top:12px; padding:12px; border-radius:14px; background: rgba(0,0,0,.18); border:1px solid rgba(255,255,255,.10); color:var(--muted); line-height:1.45; font-size:13px; min-height:80px;}
+    .log strong{color:var(--text)}
+    .footer-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;}
+    .btn{
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.12);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+    }
+    .btn:hover{border-color: rgba(122,162,255,.55);}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+    .final h3{margin:0 0 8px}
+    .final p{margin:8px 0; color:var(--muted); line-height:1.55}
+    .score{
+      display:flex; gap:12px; flex-wrap:wrap; align-items:center;
+      padding:12px; border-radius:14px; background: rgba(122,162,255,.12); border:1px solid rgba(122,162,255,.35);
+    }
+    .score b{font-size:22px}
+    .kpi{display:grid; gap:2px; padding:10px 12px; border-radius:14px; background: rgba(0,0,0,.16); border:1px solid rgba(255,255,255,.10);}
+    .kpi span{font-size:11px; color:var(--muted)}
+    .kpi strong{font-size:14px}
+    .warn{border-color: rgba(251,113,133,.35)!important; background: rgba(251,113,133,.08)!important;}
+    .ok{border-color: rgba(74,222,128,.35)!important; background: rgba(74,222,128,.08)!important;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="title">Happiest Country Simulator</div>
+      <div class="pill"><span id="roundPill">Round 1 / 10</span> · <span class="mono" id="seedPill"></span></div>
+    </div>
+
+    <div class="grid">
+      <!-- Main -->
+      <div class="card" id="mainCard">
+        <div class="card-header">
+          <div>
+            <h2 id="headline">Build the World’s Happiest Country</h2>
+            <p class="sub" id="subhead">Each round you face 4 hard policy choices. Every choice leans toward a <b>Command</b>, <b>Capitalist</b>, or <b>Socialist</b> approach—each with strengths and tradeoffs.</p>
+          </div>
+          <div class="pill mono" id="ideologyPill">Ideology: Balanced</div>
+        </div>
+        <div class="card-body" id="mainBody">
+          <p class="scenario-title" id="scenarioTitle"></p>
+          <p class="scenario-text" id="scenarioText"></p>
+
+          <div class="choices" id="choices"></div>
+
+          <div class="log" id="logBox">
+            <strong>How to win:</strong> You can win as Command, Capitalist, or Socialist—but you must solve that system’s classic problems:
+            <ul style="margin:8px 0 0 18px;">
+              <li><b>Command</b> must prevent free-riding, corruption, and shortages.</li>
+              <li><b>Capitalist</b> must reduce inequality and protect public goods.</li>
+              <li><b>Socialist</b> must keep incentives/innovation strong and avoid bureaucracy.</li>
+            </ul>
+          </div>
+
+          <div class="footer-row">
+            <button class="btn" id="restartBtn">Restart</button>
+            <button class="btn" id="toggleHintsBtn">Toggle teacher hints</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>Country Dashboard</h2>
+            <p class="sub">Stats change after each policy choice.</p>
+          </div>
+          <div class="pill mono" id="happinessPill">Happiness: 50</div>
+        </div>
+        <div class="card-body">
+          <div class="stats" id="stats"></div>
+          <div class="log" id="systemNotes">
+            <strong>System pressure:</strong>
+            <div style="margin-top:8px" id="pressureText"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ---------- Utilities ----------
+  const clamp = (v, lo=0, hi=100) => Math.max(lo, Math.min(hi, v));
+  const fmtDelta = (n) => (n>=0? `+${n}` : `${n}`);
+
+  // Optional deterministic seed (refresh-safe enough for class use)
+  const seed = Math.random().toString(16).slice(2, 8).toUpperCase();
+  document.getElementById("seedPill").textContent = `Seed ${seed}`;
+
+  // ---------- Game State ----------
+  const state = {
+    round: 0,
+    maxRounds: 10,
+    showHints: true,
+
+    // Core stats (0-100)
+    stats: {
+      happiness: 50,
+      gdp: 50,
+      equality: 50,     // higher = more equal (lower inequality)
+      freedom: 50,
+      publicGoods: 50,  // infrastructure, healthcare, education effectiveness
+      innovation: 50,
+      environment: 50,
+      trust: 50,        // institutions / corruption (higher = cleaner & trusted)
+    },
+
+    // "Ideology meters" (0-100) - where policy choices pull you.
+    ideology: {
+      command: 34,
+      capitalist: 33,
+      socialist: 33
+    },
+
+    history: []
+  };
+
+  // ---------- Scenarios (10) ----------
+  // Each option has: label, lean, effects (deltas), explanation, and a "system lesson" hint.
+  const scenarios = [
+    {
+      title: "Founding Charter: Who owns key industries?",
+      text: "Your new country must decide how ownership and competition work. This sets expectations for investment, equality, and who controls essentials like energy and transportation.",
+      options: [
+        {
+          lean: "command",
+          label: "Nationalize all major industries and set production targets.",
+          hint: "Command: strong coordination, risk of shortages and corruption if incentives are weak.",
+          effects: { gdp:+2, equality:+6, freedom:-8, innovation:-4, trust:-4, publicGoods:+4, environment:+1, happiness:+1 },
+          explain: "Central planning can quickly expand access, but heavy control can reduce freedom and create waste or favoritism if agencies aren’t accountable."
+        },
+        {
+          lean: "capitalist",
+          label: "Privatize industries; enforce competition and strong property rights.",
+          hint: "Capitalism: growth + innovation, but inequality can spike without guardrails.",
+          effects: { gdp:+6, innovation:+6, equality:-6, freedom:+4, trust:+1, publicGoods:-2, environment:-3, happiness:+1 },
+          explain: "Markets can drive growth and innovation, but without rules, wealth concentrates and public goods can be underfunded."
+        },
+        {
+          lean: "socialist",
+          label: "Mixed economy: private firms, plus worker co-ops and public options in essentials.",
+          hint: "Socialism: equity + shared gains, but must keep incentives and efficiency.",
+          effects: { gdp:+3, innovation:+2, equality:+4, freedom:+1, trust:+2, publicGoods:+3, environment:+1, happiness:+3 },
+          explain: "A mixed model can spread benefits more evenly while keeping competition—if management stays efficient and not overly bureaucratic."
+        },
+        {
+          lean: "capitalist",
+          label: "Privatize, but cap market concentration and ban anti-competitive mergers.",
+          hint: "Capitalism-with-rules: aims to keep markets dynamic while limiting monopoly power.",
+          effects: { gdp:+5, innovation:+4, equality:-2, freedom:+3, trust:+3, publicGoods:-1, environment:-2, happiness:+2 },
+          explain: "Competition policy reduces monopoly pricing and political capture, but inequality can still rise if wages and taxes don’t adjust."
+        }
+      ]
+    },
+    {
+      title: "Taxes: How do you fund the state?",
+      text: "You need revenue for schools, healthcare, and infrastructure—but taxes can discourage work/investment if designed poorly.",
+      options: [
+        {
+          lean: "capitalist",
+          label: "Low taxes across the board; rely on growth and consumption.",
+          hint: "Risk: underfunded public goods; inequality widens if safety nets shrink.",
+          effects: { gdp:+5, publicGoods:-6, equality:-6, trust:-2, happiness:-2, freedom:+2, environment:-1, innovation:+2 },
+          explain: "Lower taxes can boost investment, but if services crumble, long-run happiness and trust fall."
+        },
+        {
+          lean: "socialist",
+          label: "Highly progressive income & wealth taxes; expand universal services.",
+          hint: "Watch: high rates can reduce incentives if loopholes and bureaucracy grow.",
+          effects: { gdp:-1, publicGoods:+8, equality:+8, trust:+2, happiness:+4, freedom:-1, innovation:-1, environment:+2 },
+          explain: "Broad services raise quality of life, but the system must be efficient and limit tax avoidance."
+        },
+        {
+          lean: "command",
+          label: "State sets wages and prices; takes profits directly from state firms.",
+          hint: "Command: stable basics, but price controls can create shortages/black markets.",
+          effects: { gdp:-2, publicGoods:+6, equality:+6, freedom:-6, trust:-3, happiness:+2, innovation:-3, environment:+1 },
+          explain: "Direct control can guarantee basics, but if prices don’t match reality, goods disappear or move to informal markets."
+        },
+        {
+          lean: "capitalist",
+          label: "Moderate taxes + negative income tax (cash support) to fight poverty.",
+          hint: "Capitalism + redistribution: targets inequality without crushing incentives.",
+          effects: { gdp:+3, publicGoods:+2, equality:+5, trust:+2, happiness:+3, innovation:+1, freedom:+1, environment:0 },
+          explain: "A simpler transfer can reduce poverty while keeping markets active—if the program is well-targeted and not easily abused."
+        }
+      ]
+    },
+    {
+      title: "Healthcare: What’s the model?",
+      text: "Health outcomes strongly predict life satisfaction. But healthcare costs can explode if incentives are misaligned.",
+      options: [
+        {
+          lean: "socialist",
+          label: "Universal single-payer system; private insurance optional for extras.",
+          hint: "Must manage wait times and spending efficiency.",
+          effects: { happiness:+5, publicGoods:+6, equality:+6, gdp:-1, freedom:-1, trust:+2, innovation:0, environment:0 },
+          explain: "Universal access boosts happiness and equality, but requires cost controls and smart capacity planning."
+        },
+        {
+          lean: "capitalist",
+          label: "Private insurance with subsidies; encourage competition among providers.",
+          hint: "Must avoid cost spirals and unequal access.",
+          effects: { happiness:+1, publicGoods:+1, equality:-4, gdp:+2, freedom:+2, trust:0, innovation:+2, environment:0 },
+          explain: "Choice and competition can increase innovation, but unequal coverage can reduce overall happiness."
+        },
+        {
+          lean: "command",
+          label: "State-run hospitals; mandatory assignment of doctors to regions.",
+          hint: "Central staffing can improve coverage but may reduce morale and quality.",
+          effects: { happiness:+2, publicGoods:+4, equality:+5, gdp:-2, freedom:-4, trust:-2, innovation:-2, environment:0 },
+          explain: "Coverage can be guaranteed, but rigid assignments can hurt motivation and service quality if citizens can’t choose."
+        },
+        {
+          lean: "capitalist",
+          label: "Private system + strict price transparency and anti-price-gouging rules.",
+          hint: "Market + regulation: tries to keep costs down while preserving innovation.",
+          effects: { happiness:+3, publicGoods:+2, equality:-1, gdp:+2, freedom:+2, trust:+2, innovation:+2, environment:0 },
+          explain: "Transparency can curb surprise bills, but enforcement must be real or prices won’t change."
+        }
+      ]
+    },
+    {
+      title: "Education: How do you build human capital?",
+      text: "Education drives long-term productivity and social mobility—but systems can become unequal, rigid, or inefficient.",
+      options: [
+        {
+          lean: "socialist",
+          label: "Free public schools + free college; fund tutoring in low-income areas.",
+          hint: "Bureaucracy risk: measure outcomes to avoid waste.",
+          effects: { publicGoods:+7, equality:+6, innovation:+2, gdp:+1, happiness:+3, trust:+2, freedom:0, environment:0 },
+          explain: "Big access boosts opportunity, but results depend on accountability and good teaching incentives."
+        },
+        {
+          lean: "capitalist",
+          label: "School choice vouchers; let schools compete for students.",
+          hint: "Risk: stratification if the best schools skim advantaged students.",
+          effects: { publicGoods:+2, equality:-4, innovation:+2, gdp:+2, happiness:+1, trust:0, freedom:+2, environment:0 },
+          explain: "Competition can improve quality, but without guardrails it can increase segregation and inequality."
+        },
+        {
+          lean: "command",
+          label: "National curriculum + state assignment to schools; prioritize STEM quotas.",
+          hint: "Risk: stifles creativity; mismatch if quotas ignore student interests.",
+          effects: { publicGoods:+5, equality:+3, innovation:-2, gdp:+1, happiness:+1, trust:-1, freedom:-4, environment:0 },
+          explain: "Standardization can raise baseline quality, but can suppress local needs and student choice."
+        },
+        {
+          lean: "capitalist",
+          label: "Public schools remain; add performance pay for teachers and principals.",
+          hint: "Incentives help—but only if metrics can’t be gamed.",
+          effects: { publicGoods:+4, equality:+1, innovation:+1, gdp:+2, happiness:+2, trust:+1, freedom:+1, environment:0 },
+          explain: "Measured incentives can boost outcomes, but poorly designed testing encourages cheating and teaching-to-the-test."
+        }
+      ]
+    },
+    {
+      title: "Housing: Rents are soaring",
+      text: "Young families can’t afford housing. The choice affects equality, growth, and public trust.",
+      options: [
+        {
+          lean: "command",
+          label: "Implement strict rent controls and ration units by need.",
+          hint: "Command: protects tenants short-term; risks shortages and black markets.",
+          effects: { equality:+6, happiness:+2, trust:-2, gdp:-2, publicGoods:-1, freedom:-3, innovation:-1, environment:+1 },
+          explain: "Rent control can prevent displacement, but builders may stop building—creating long-run shortages."
+        },
+        {
+          lean: "capitalist",
+          label: "Deregulate zoning; unleash private construction as fast as possible.",
+          hint: "Capitalism: boosts supply; must protect vulnerable renters during transition.",
+          effects: { gdp:+4, happiness:+1, equality:-2, publicGoods:-1, trust:+1, freedom:+2, environment:-2, innovation:+1 },
+          explain: "More supply helps affordability over time, but without protections, short-run displacement can rise."
+        },
+        {
+          lean: "socialist",
+          label: "Build large-scale public/social housing + targeted rental assistance.",
+          hint: "Needs strong project management to avoid waste.",
+          effects: { equality:+5, happiness:+4, publicGoods:+4, gdp:-1, trust:+2, freedom:-1, environment:+2, innovation:0 },
+          explain: "Public housing can stabilize costs, but quality and maintenance require good governance."
+        },
+        {
+          lean: "capitalist",
+          label: "Allow building + impose a land-value tax to discourage speculation.",
+          hint: "Market-friendly with an anti-speculation lever.",
+          effects: { gdp:+3, equality:+2, happiness:+3, trust:+2, publicGoods:+2, freedom:+1, environment:+1, innovation:+1 },
+          explain: "Land-value taxes push land into productive use and fund services without punishing work as much."
+        }
+      ]
+    },
+    {
+      title: "The Free-Rider Problem: Public goods are underused/abused",
+      text: "Parks, transit, and shared spaces are being trashed. People benefit even if they don’t contribute. How do you respond?",
+      options: [
+        {
+          lean: "command",
+          label: "Strict enforcement: high fines + mandatory community labor for violators.",
+          hint: "Command: solves free-riding fast; can reduce perceived freedom and trust if unfair.",
+          effects: { publicGoods:+6, trust:-2, freedom:-5, happiness:+1, equality:+1, gdp:0, innovation:0, environment:+2 },
+          explain: "Punishment reduces abuse quickly, but heavy-handed policing can backfire if it feels arbitrary."
+        },
+        {
+          lean: "capitalist",
+          label: "User-fees & private maintenance contracts; pay-to-use upgrades.",
+          hint: "Capitalism: efficiency, but access can become unequal.",
+          effects: { publicGoods:+4, trust:+1, freedom:+1, equality:-4, happiness:-1, gdp:+2, innovation:+1, environment:+1 },
+          explain: "Fees align incentives and fund upkeep, but poorer citizens may be priced out of shared goods."
+        },
+        {
+          lean: "socialist",
+          label: "Civic rewards: tax credits/points for volunteering; community councils manage spaces.",
+          hint: "Socialism: boosts participation—watch gaming of the system.",
+          effects: { publicGoods:+5, trust:+3, freedom:+1, equality:+2, happiness:+3, gdp:0, innovation:0, environment:+2 },
+          explain: "Positive incentives build norms and trust, but the reward system needs verification to prevent cheating."
+        },
+        {
+          lean: "capitalist",
+          label: "Nudges + transparency: publish neighborhood scores; small fines only.",
+          hint: "Light-touch: works if social norms are strong; weak if trust is already low.",
+          effects: { publicGoods:+2, trust:+2, freedom:+2, happiness:+2, equality:0, gdp:+1, innovation:+1, environment:+1 },
+          explain: "Public dashboards can motivate good behavior, but they fail when people don’t trust institutions or data."
+        }
+      ]
+    },
+    {
+      title: "Inequality Spike: The top 10% now hold most wealth",
+      text: "The economy is growing, but most citizens feel left behind. This is a classic capitalism challenge.",
+      options: [
+        {
+          lean: "capitalist",
+          label: "Do nothing—inequality is a tradeoff for rapid growth.",
+          hint: "Risk: trust collapses; happiness falls even if GDP rises.",
+          effects: { gdp:+3, innovation:+2, equality:-8, trust:-5, happiness:-6, publicGoods:-1, freedom:+1, environment:-1 },
+          explain: "Growth alone doesn’t guarantee broad well-being; perceived unfairness erodes social cohesion and stability."
+        },
+        {
+          lean: "socialist",
+          label: "Raise minimum wage + strengthen unions + profit-sharing incentives.",
+          hint: "Must avoid pricing out small firms; pair with productivity policies.",
+          effects: { equality:+6, happiness:+4, trust:+2, gdp:-1, innovation:0, publicGoods:+1, freedom:-1, environment:0 },
+          explain: "Worker bargaining raises wages and equality, but policies should help productivity so firms can sustain higher labor costs."
+        },
+        {
+          lean: "command",
+          label: "Mandatory wage caps and centralized wage-setting boards.",
+          hint: "Command: compresses inequality fast; can reduce incentives and increase corruption.",
+          effects: { equality:+8, happiness:+2, gdp:-3, innovation:-3, trust:-3, freedom:-4, publicGoods:+1, environment:0 },
+          explain: "Hard caps can reduce inequality, but they can also push compensation into hidden perks or informal markets."
+        },
+        {
+          lean: "capitalist",
+          label: "Progressive taxes + earned-income credit + invest in training.",
+          hint: "Market + redistribution: keeps incentives while broadening opportunity.",
+          effects: { equality:+5, happiness:+3, trust:+2, gdp:+1, innovation:+1, publicGoods:+3, freedom:+1, environment:0 },
+          explain: "Redistribution plus skills investment can preserve growth while improving fairness—if programs are efficient."
+        }
+      ]
+    },
+    {
+      title: "Innovation Slowdown: Productivity is flat",
+      text: "Your country risks stagnation. This is often a socialist/command challenge if incentives weaken.",
+      options: [
+        {
+          lean: "capitalist",
+          label: "Big R&D tax credits + easier startup formation + bankruptcy protection.",
+          hint: "Capitalism: boosts innovation; watch monopoly power and inequality.",
+          effects: { innovation:+7, gdp:+4, freedom:+2, equality:-2, trust:+1, happiness:+1, publicGoods:0, environment:-1 },
+          explain: "Lowering risk and boosting returns can unleash innovation, but benefits can concentrate without competition policy."
+        },
+        {
+          lean: "socialist",
+          label: "Public innovation agency + prize funding for breakthroughs; open patents for essentials.",
+          hint: "Socialism: can align innovation with public good—avoid slow bureaucracy.",
+          effects: { innovation:+5, gdp:+2, publicGoods:+3, equality:+2, trust:+2, happiness:+2, freedom:-1, environment:+1 },
+          explain: "Prizes and public R&D can steer progress toward social needs, but must be nimble and performance-driven."
+        },
+        {
+          lean: "command",
+          label: "Five-year plan for priority tech; redirect workers into targeted sectors.",
+          hint: "Command: coordinated push; risks misallocation if planners guess wrong.",
+          effects: { innovation:+2, gdp:+1, publicGoods:+2, equality:+2, freedom:-5, trust:-2, happiness:0, environment:0 },
+          explain: "Central direction can focus resources, but wrong bets waste talent and suppress entrepreneurship."
+        },
+        {
+          lean: "capitalist",
+          label: "Keep welfare strong but require job training participation to receive benefits.",
+          hint: "Incentive-compatible safety net: reduces dependency risk.",
+          effects: { innovation:+3, gdp:+2, equality:+2, trust:+2, happiness:+2, publicGoods:+1, freedom:+1, environment:0 },
+          explain: "A safety net can coexist with incentives when benefits encourage skill-building rather than indefinite detachment."
+        }
+      ]
+    },
+    {
+      title: "Corruption Scandal: Officials are taking bribes",
+      text: "This is a common failure mode for command systems (and any weak institution). Trust is crashing.",
+      options: [
+        {
+          lean: "command",
+          label: "Purge agencies; empower a central inspectorate with wide arrest powers.",
+          hint: "Command: fast crackdown; risk of political abuse and fear.",
+          effects: { trust:+4, freedom:-6, happiness:-1, equality:+1, gdp:-1, publicGoods:+1, innovation:-1, environment:0 },
+          explain: "Rapid enforcement can deter corruption, but unchecked power can be used against opponents and reduce freedom."
+        },
+        {
+          lean: "capitalist",
+          label: "Radical transparency: publish contracts, bids, and lobbying meetings; protect whistleblowers.",
+          hint: "Rule-of-law approach improves trust without heavy coercion.",
+          effects: { trust:+7, freedom:+2, happiness:+3, equality:+1, gdp:+1, publicGoods:+2, innovation:+1, environment:0 },
+          explain: "Transparency and whistleblower protection make corruption harder, improving trust while preserving liberties."
+        },
+        {
+          lean: "socialist",
+          label: "Citizen oversight boards + participatory budgeting at local levels.",
+          hint: "Democratic control: works best with strong civic engagement and good data.",
+          effects: { trust:+6, freedom:+1, happiness:+3, equality:+2, gdp:0, publicGoods:+2, innovation:0, environment:+1 },
+          explain: "Direct citizen oversight can reduce capture, but it needs informed participation to avoid gridlock."
+        },
+        {
+          lean: "capitalist",
+          label: "Raise public-sector wages + strict audits and conflict-of-interest rules.",
+          hint: "Reduce temptation + increase detection probability.",
+          effects: { trust:+5, happiness:+2, equality:0, gdp:0, freedom:+1, publicGoods:+1, innovation:0, environment:0 },
+          explain: "Better pay and credible audits reduce bribery incentives, but enforcement must be consistent."
+        }
+      ]
+    },
+    {
+      title: "Climate Shock: Floods damage coastal cities",
+      text: "Disasters can erase years of progress. Environmental policy affects long-term happiness and stability.",
+      options: [
+        {
+          lean: "command",
+          label: "Mandate rapid decarbonization quotas; restrict high-emission industries immediately.",
+          hint: "Command: fast action, but can hit GDP if transition is unmanaged.",
+          effects: { environment:+8, publicGoods:+2, gdp:-3, happiness:+1, freedom:-3, trust:-1, innovation:+1, equality:+2 },
+          explain: "Hard mandates cut emissions quickly, but abrupt rules can cause unemployment without a transition plan."
+        },
+        {
+          lean: "capitalist",
+          label: "Carbon tax + let markets find the cheapest reductions; rebate revenue to households.",
+          hint: "Market-based: protects incentives while addressing inequality via rebates.",
+          effects: { environment:+7, gdp:+1, happiness:+3, equality:+2, trust:+2, freedom:+1, innovation:+2, publicGoods:+1 },
+          explain: "Pricing carbon can reduce emissions efficiently, and rebates keep low-income households whole."
+        },
+        {
+          lean: "socialist",
+          label: "Green public works program: transit, insulation, renewables; guarantee jobs in transition.",
+          hint: "Needs strong project management to avoid waste.",
+          effects: { environment:+6, publicGoods:+6, happiness:+4, equality:+3, gdp:0, trust:+2, freedom:0, innovation:+1 },
+          explain: "A job-guarantee transition reduces backlash and builds infrastructure, but must avoid boondoggles."
+        },
+        {
+          lean: "capitalist",
+          label: "Deregulate clean tech + fast-track permitting; punish polluters via liability.",
+          hint: "Innovation-forward: works if liability enforcement is real.",
+          effects: { environment:+5, innovation:+4, gdp:+2, freedom:+2, trust:+1, equality:-1, happiness:+2, publicGoods:0 },
+          explain: "Fast tech deployment helps, but if liability is weak, firms will under-invest in prevention."
+        }
+      ]
+    },
+    {
+      title: "Social Cohesion: People are polarized and unhappy",
+      text: "Even with money, happiness drops when people don’t trust each other or institutions. What do you do?",
+      options: [
+        {
+          lean: "socialist",
+          label: "Expand family benefits, childcare, and paid leave to reduce stress and boost mobility.",
+          hint: "High happiness potential; watch program efficiency.",
+          effects: { happiness:+6, equality:+4, publicGoods:+3, trust:+2, gdp:-1, freedom:0, innovation:0, environment:0 },
+          explain: "Lower stress and higher stability raise life satisfaction, but programs need good design to avoid waste."
+        },
+        {
+          lean: "capitalist",
+          label: "Invest in local entrepreneurship + small-business grants in left-behind regions.",
+          hint: "Can rebuild purpose and jobs; grants must avoid favoritism.",
+          effects: { happiness:+3, gdp:+3, innovation:+2, trust:+1, equality:+1, publicGoods:+1, freedom:+1, environment:0 },
+          explain: "Opportunity and jobs reduce resentment, but selection must be transparent to avoid corruption."
+        },
+        {
+          lean: "command",
+          label: "Limit protests and tighten information control to reduce ‘instability’.",
+          hint: "Short-term order; long-term happiness and trust often fall.",
+          effects: { happiness:-2, trust:-6, freedom:-8, gdp:0, equality:0, publicGoods:0, innovation:-2, environment:0 },
+          explain: "Suppressing dissent can create surface stability, but it usually undermines trust and subjective well-being."
+        },
+        {
+          lean: "capitalist",
+          label: "National service option + civic education; reward cross-community projects.",
+          hint: "Builds social capital if participation is broad.",
+          effects: { happiness:+4, trust:+4, equality:+1, publicGoods:+2, gdp:0, freedom:+1, innovation:0, environment:+1 },
+          explain: "Shared projects improve trust and belonging, which strongly predicts happiness in many societies."
+        }
+      ]
+    }
+  ];
+
+  // ---------- Rendering ----------
+  const statsConfig = [
+    ["happiness","Happiness"],
+    ["gdp","GDP / Productivity"],
+    ["equality","Equality (low inequality)"],
+    ["freedom","Personal Freedom"],
+    ["publicGoods","Public Goods"],
+    ["innovation","Innovation"],
+    ["environment","Environment"],
+    ["trust","Trust (low corruption)"],
+  ];
+
+  const el = (id) => document.getElementById(id);
+
+  function ideologyLabel() {
+    const { command, capitalist, socialist } = state.ideology;
+    const max = Math.max(command, capitalist, socialist);
+    const winners = Object.entries(state.ideology).filter(([k,v]) => v === max).map(([k]) => k);
+    if (winners.length > 1) return "Balanced";
+    return winners[0][0].toUpperCase() + winners[0].slice(1);
+  }
+
+  function applyIdeologyShift(lean) {
+    const n = 6;
+    if (lean === "command") { state.ideology.command += n; state.ideology.capitalist -= 3; state.ideology.socialist -= 3; }
+    if (lean === "capitalist") { state.ideology.capitalist += n; state.ideology.command -= 3; state.ideology.socialist -= 3; }
+    if (lean === "socialist") { state.ideology.socialist += n; state.ideology.command -= 3; state.ideology.capitalist -= 3; }
+    for (const k of Object.keys(state.ideology)) state.ideology[k] = clamp(state.ideology[k], 0, 100);
+    const sum = state.ideology.command + state.ideology.capitalist + state.ideology.socialist;
+    if (sum > 0) {
+      state.ideology.command = Math.round((state.ideology.command / sum) * 100);
+      state.ideology.capitalist = Math.round((state.ideology.capitalist / sum) * 100);
+      state.ideology.socialist = 100 - state.ideology.command - state.ideology.capitalist;
+    }
+  }
+
+  function pressureNotes() {
+    const s = state.stats;
+    const notes = [];
+    if (s.trust < 35) notes.push(`⚠️ <b>Corruption / low trust</b> is high. Policies may not work as intended.`);
+    if (s.equality < 35) notes.push(`⚠️ <b>Inequality</b> is high. Happiness often drops when people feel the system is unfair.`);
+    if (s.publicGoods < 35) notes.push(`⚠️ <b>Public goods</b> are weak. Roads, schools, healthcare quality may drag happiness.`);
+    if (s.innovation < 35) notes.push(`⚠️ <b>Innovation incentives</b> are weak. Long-run growth may stagnate.`);
+    if (s.environment < 35) notes.push(`⚠️ <b>Environmental damage</b> is rising. Disaster risk and health costs increase.`);
+    if (s.freedom < 30) notes.push(`⚠️ <b>Freedom</b> is very low. People may feel safe, but unhappy or resentful over time.`);
+    if (notes.length === 0) notes.push(`✅ Your country is holding together across multiple dimensions. Keep balancing tradeoffs.`);
+    return notes.join("<br>");
+  }
+
+  function recomputeHappiness() {
+    const s = state.stats;
+    const h =
+      0.30 * s.gdp +
+      0.20 * s.equality +
+      0.15 * s.publicGoods +
+      0.10 * s.freedom +
+      0.10 * s.trust +
+      0.10 * s.environment +
+      0.05 * s.innovation;
+    const lows = Object.entries(s).filter(([k,v]) => k!=="happiness" && v < 25).length;
+    const penalty = lows * 2.5;
+    s.happiness = clamp(Math.round(h - penalty));
+  }
+
+  function renderStats(lastDeltas = null) {
+    const root = el("stats");
+    root.innerHTML = "";
+    for (const [key, label] of statsConfig) {
+      if (key === "happiness") continue;
+      const v = state.stats[key];
+
+      const wrap = document.createElement("div");
+      wrap.className = "stat";
+
+      const row = document.createElement("label");
+      const left = document.createElement("span");
+      left.textContent = label;
+
+      const right = document.createElement("span");
+      right.className = "mono";
+
+      if (lastDeltas && (key in lastDeltas)) {
+        const d = lastDeltas[key];
+        const cls = d >= 0 ? "good" : "bad";
+        right.innerHTML = `${v} <span class="delta ${cls}">(${fmtDelta(d)})</span>`;
+      } else {
+        right.textContent = v;
+      }
+
+      row.appendChild(left);
+      row.appendChild(right);
+
+      const bar = document.createElement("div");
+      bar.className = "bar";
+      const fill = document.createElement("div");
+      fill.className = "fill";
+      fill.style.width = `${v}%`;
+      bar.appendChild(fill);
+
+      wrap.appendChild(row);
+      wrap.appendChild(bar);
+      root.appendChild(wrap);
+    }
+
+    el("happinessPill").textContent = `Happiness: ${state.stats.happiness}`;
+    el("pressureText").innerHTML = pressureNotes();
+
+    const id = ideologyLabel();
+    el("ideologyPill").textContent = `Ideology: ${id} (${state.ideology.command}/${state.ideology.capitalist}/${state.ideology.socialist})`;
+  }
+
+  function renderRound() {
+    const r = state.round;
+    el("roundPill").textContent = `Round ${r+1} / ${state.maxRounds}`;
+
+    const sc = scenarios[r];
+    el("scenarioTitle").textContent = sc.title;
+    el("scenarioText").textContent = sc.text;
+
+    const choices = el("choices");
+    choices.innerHTML = "";
+
+    sc.options.forEach((opt, idx) => {
+      const btn = document.createElement("button");
+      btn.className = "choice";
+      btn.onclick = () => chooseOption(idx);
+
+      const tagClass = opt.lean;
+      const tagText = opt.lean === "command" ? "Command" : opt.lean === "capitalist" ? "Capitalist" : "Socialist";
+
+      btn.innerHTML = `
+        <div style="display:flex; gap:10px; justify-content:space-between; align-items:flex-start;">
+          <div style="font-weight:800; font-size:14px; line-height:1.25;">${opt.label}</div>
+          <span class="tag ${tagClass}">${tagText}</span>
+        </div>
+        <small>${state.showHints ? opt.hint : " "}</small>
+      `;
+      choices.appendChild(btn);
+    });
+
+    el("logBox").innerHTML = `
+      <strong>Decision needed:</strong> Choose one policy. Watch what it improves—and what it breaks.
+      <div class="tagrow">
+        <span class="tag command">Command tradeoff: free-riding / corruption / shortages</span>
+        <span class="tag capitalist">Capitalism tradeoff: inequality / underfunded public goods</span>
+        <span class="tag socialist">Socialism tradeoff: incentives / bureaucracy</span>
+      </div>
+    `;
+
+    renderStats(null);
+  }
+
+  function applyEffects(effects) {
+    const deltas = {};
+    for (const [k, d] of Object.entries(effects)) {
+      if (!(k in state.stats)) continue;
+      const before = state.stats[k];
+      state.stats[k] = clamp(before + d);
+      deltas[k] = d;
+    }
+    recomputeHappiness();
+    deltas.happiness = 0;
+    return deltas;
+  }
+
+  function chooseOption(optionIndex) {
+    const sc = scenarios[state.round];
+    const opt = sc.options[optionIndex];
+
+    applyIdeologyShift(opt.lean);
+    applyEffects(opt.effects);
+
+    state.history.push({
+      round: state.round + 1,
+      scenario: sc.title,
+      choice: opt.label,
+      lean: opt.lean,
+      effects: opt.effects
+    });
+
+    el("logBox").innerHTML = `
+      <strong>Outcome:</strong> ${opt.explain}<br><br>
+      <strong>Key idea:</strong> ${opt.hint}
+    `;
+
+    renderStats(opt.effects);
+
+    state.round += 1;
+    if (state.round >= state.maxRounds) {
+      renderFinal();
+    } else {
+      setTimeout(renderRound, 700);
+    }
+  }
+
+  function finalIdeology() {
+    const { command, capitalist, socialist } = state.ideology;
+    const max = Math.max(command, capitalist, socialist);
+    const winners = Object.entries(state.ideology).filter(([k,v]) => v === max).map(([k]) => k);
+    if (winners.length > 1) return "Balanced";
+    return winners[0];
+  }
+
+  function systemGradeNotes(system) {
+    const s = state.stats;
+    const notes = [];
+
+    if (system === "command") {
+      notes.push(`<b>Command win path:</b> You can maximize equality/public goods, but you must keep <b>trust</b> high (anti-corruption) and avoid shortages by keeping <b>GDP</b> and <b>innovation</b> from collapsing.`);
+      if (s.trust < 45) notes.push(`⚠️ Command weakness triggered: <b>trust is low</b>. Corruption/black markets make planning fail.`);
+      if (s.innovation < 40) notes.push(`⚠️ Command weakness triggered: <b>innovation is low</b>. Plans can’t adapt to change.`);
+      if (s.freedom < 25) notes.push(`⚠️ People may feel controlled; long-run happiness suffers even if basics are provided.`);
+    }
+
+    if (system === "capitalist") {
+      notes.push(`<b>Capitalist win path:</b> You can drive GDP/innovation, but you must keep <b>equality</b> and <b>public goods</b> from collapsing (inequality + underinvestment reduces happiness).`);
+      if (s.equality < 45) notes.push(`⚠️ Capitalism weakness triggered: <b>inequality is high</b>. Social trust and happiness drop.`);
+      if (s.publicGoods < 40) notes.push(`⚠️ Capitalism weakness triggered: <b>public goods are weak</b>. Markets underprovide infrastructure/health/education.`);
+      if (s.environment < 35) notes.push(`⚠️ Externalities warning: <b>environment is low</b>. Unpriced pollution harms everyone.`);
+    }
+
+    if (system === "socialist") {
+      notes.push(`<b>Socialist win path:</b> You can raise equality and happiness via services, but you must keep <b>innovation</b> and <b>GDP</b> healthy and avoid bloated bureaucracy (trust/accountability).`);
+      if (s.innovation < 45) notes.push(`⚠️ Socialism weakness triggered: <b>innovation incentives are weak</b>. Growth can stagnate.`);
+      if (s.trust < 40) notes.push(`⚠️ Bureaucracy risk: <b>trust is low</b>. Programs waste money and people disengage.`);
+      if (s.gdp < 40) notes.push(`⚠️ Funding risk: <b>GDP is low</b>. Great programs become unsustainable.`);
+    }
+
+    if (system === "balanced") {
+      notes.push(`<b>Balanced win path:</b> Mixing tools can work well—but inconsistency can confuse investors and citizens. The goal is coherent rules + strong institutions.`);
+      if (s.trust < 45) notes.push(`⚠️ Mixed systems still fail without <b>trust</b> and good governance.`);
+    }
+
+    return notes.map(x => `<p style="margin:8px 0; color:var(--muted); line-height:1.55">${x}</p>`).join("");
+  }
+
+  function finalScore() {
+    const s = state.stats;
+    const sustainability =
+      0.15 * s.environment +
+      0.15 * s.trust +
+      0.20 * s.publicGoods +
+      0.25 * s.innovation +
+      0.25 * s.gdp;
+    const score = Math.round(0.65 * s.happiness + 0.35 * sustainability);
+    return clamp(score);
+  }
+
+  function renderFinal() {
+    const system = finalIdeology();
+    const score = finalScore();
+    const s = state.stats;
+
+    const winBand = (score >= 75) ? "ok" : (score >= 55 ? "" : "warn");
+    const systemLabel =
+      system === "command" ? "Command" :
+      system === "capitalist" ? "Capitalist" :
+      system === "socialist" ? "Socialist" : "Balanced";
+
+    const mainBody = el("mainBody");
+    mainBody.innerHTML = `
+      <div class="final">
+        <div class="score ${winBand}">
+          <div>
+            <div style="color:var(--muted); font-size:12px;">FINAL SCORE</div>
+            <b>${score}</b>
+          </div>
+          <div class="kpi">
+            <span>Ideology outcome</span>
+            <strong>${systemLabel}</strong>
+          </div>
+          <div class="kpi">
+            <span>Happiness</span>
+            <strong>${s.happiness}</strong>
+          </div>
+          <div class="kpi">
+            <span>GDP</span>
+            <strong>${s.gdp}</strong>
+          </div>
+          <div class="kpi">
+            <span>Equality</span>
+            <strong>${s.equality}</strong>
+          </div>
+          <div class="kpi">
+            <span>Trust</span>
+            <strong>${s.trust}</strong>
+          </div>
+        </div>
+
+        <h3 style="margin-top:14px;">What your country learned</h3>
+        ${systemGradeNotes(system === "command" || system === "capitalist" || system === "socialist" ? system : "balanced")}
+
+        <h3 style="margin-top:14px;">Debrief questions (class discussion)</h3>
+        <p>1) Which stat was hardest to keep high <em>without</em> lowering another?</p>
+        <p>2) Where did your system’s classic weakness show up (inequality, free-riding/corruption, incentives/bureaucracy)?</p>
+        <p>3) What would you change if you had 5 more rounds?</p>
+
+        <h3 style="margin-top:14px;">Your decisions (summary)</h3>
+        <div class="log">
+          ${state.history.map(h => `
+            <div style="margin:8px 0;">
+              <strong>Round ${h.round}:</strong> ${h.scenario}<br>
+              <span style="color:var(--muted)">Choice (${h.lean}):</span> ${h.choice}
+            </div>
+          `).join("")}
+        </div>
+
+        <div class="footer-row">
+          <button class="btn" id="restartBtn2">Play again</button>
+          <button class="btn" id="exportBtn">Copy results (JSON)</button>
+        </div>
+      </div>
+    `;
+
+    el("roundPill").textContent = `Finished · 10 / 10`;
+    el("ideologyPill").textContent = `Ideology: ${systemLabel} (${state.ideology.command}/${state.ideology.capitalist}/${state.ideology.socialist})`;
+    el("happinessPill").textContent = `Happiness: ${s.happiness}`;
+    renderStats(null);
+
+    document.getElementById("restartBtn2").onclick = () => resetGame();
+    document.getElementById("exportBtn").onclick = () => {
+      const payload = { seed, score, ideology: state.ideology, stats: state.stats, history: state.history };
+      navigator.clipboard.writeText(JSON.stringify(payload, null, 2)).then(() => {
+        alert("Copied results JSON to clipboard!");
+      }).catch(() => alert("Could not access clipboard. Copy manually from the console."));
+      console.log(payload);
+    };
+  }
+
+  function resetGame() {
+    // simplest classroom-safe reset
+    location.reload();
+  }
+
+  // ---------- Buttons ----------
+  el("restartBtn").onclick = () => resetGame();
+  el("toggleHintsBtn").onclick = () => {
+    state.showHints = !state.showHints;
+    el("toggleHintsBtn").textContent = state.showHints ? "Hide teacher hints" : "Show teacher hints";
+    renderRound();
+  };
+
+  // ---------- Start ----------
+  recomputeHappiness();
+  renderRound();
+
+})();
+</script>
+</body>
+</html>
